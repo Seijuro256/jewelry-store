@@ -1,14 +1,27 @@
 import Link from 'next/link'
-import { products } from '@/lib/data'
 import ProductCard from '@/components/ProductCard'
+import { Product } from '@/lib/types'
 
-export default function HomePage() {
+async function getProducts(): Promise<Product[]> {
+  const res = await fetch('http://localhost:3000/api/products', {
+    cache: 'no-store' // Always get fresh data
+  })
+
+  if (!res.ok) {
+    throw new Error('Failed to fetch products')
+  }
+
+  return res.json()
+}
+
+export default async function HomePage() {
+  const products = await getProducts()
   const featuredProducts = products.slice(0, 3)
 
   return (
     <div>
       <section className="text-center py-12">
-        <h1 className="text-4xl font-bold mb-4">Welcome to JewelryShop</h1>
+        <h1 className="text-4xl font-bold mb-4">Welcome to Yeah Noir Yeah!</h1>
         <p className="text-xl text-gray-600 mb-8">
           Discover our collection of handcrafted jewelry
         </p>
@@ -18,7 +31,7 @@ export default function HomePage() {
         >
           Shop Now
         </Link>
-      </section> 
+      </section>
 
       <section className="mt-12">
         <h2 className="text-2xl font-bold mb-6">Featured Products</h2>

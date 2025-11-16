@@ -1,11 +1,24 @@
-import { products } from '@/lib/data'
 import { formatPrice } from '@/lib/utils'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
+import { Product } from '@/lib/types'
 
-export default function ProductDetailPage({ params }: { params: {id: string}}) {
+async function getProduct(id: string): Promise<Product | null> {
+  const res = await fetch(`http://localhost:3000/api/products/${id}`, {
+    cache: 'no-store'
+  })
+  
+  if (!res.ok) {
+    return null
+  }
+  
+  return res.json()
+}
 
-  const product = products.find(p => p.id === params.id)
+export default async function ProductDetailPage({ params }: { params: {id: string}}) {
+
+  const product = await getProduct(params.id)
 
   if(!product) {
     notFound()
@@ -26,9 +39,41 @@ export default function ProductDetailPage({ params }: { params: {id: string}}) {
       </Link>
 
       <div className="grid md:grid-cols-2 gap-8">
-        {/* Product Image */}
-        <div className="aspect-square bg-gray-200 rounded-lg flex items-center justify-center">
-          <span className="text-gray-400">No Image</span>
+        {/* Product Images */}
+        <div className="space-y-4">
+          {product.images.length > 0 && product.images[0] ? (
+            <>
+              <div className="aspect-square bg-gray-200 rounded-lg overflow-hidden relative">
+                <Image
+                  src={product.images[0]}
+                  alt={product.name}
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              </div>
+              
+              {/* Additional images */}
+              {product.images.length > 1 && (
+                <div className="grid grid-cols-4 gap-2">
+                  {product.images.slice(1).map((image, index) => (
+                    <div key={index} className="aspect-square bg-gray-200 rounded-lg overflow-hidden relative">
+                      <Image
+                        src={image}
+                        alt={`${product.name} - Image ${index + 2}`} // Naming Alt image to match updated index
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+            ) : (
+            <div className="aspect-square bg-gray-200 rounded-lg flex items-center justify-center">
+              <span className="text-gray-400">No Image</span>
+            </div>
+          )}
         </div>
 
         {/* Product Details */}
@@ -45,9 +90,12 @@ export default function ProductDetailPage({ params }: { params: {id: string}}) {
             </span>
           </div>
 
-          <div className="mb-6">
+           <div className="mb-6">
             <h2 className="font-semibold mb-2">Description</h2>
-            <p className="text-gray-600">{product.description}</p>
+            <div 
+              className="text-gray-600 prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: product.description }}
+            />
           </div>
 
           {product.materials && product.materials.length > 0 && (

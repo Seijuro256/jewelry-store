@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { Product } from '@/lib/types'
 import { formatPrice } from '@/lib/utils'
 
@@ -14,15 +15,25 @@ export default function ProductCard({ product }: ProductCardProps) {
   }
 
   const stockStatus = getStockStatus(product.stock)
+  const hasImage = product.images.length > 0 && product.images[0]
 
   return (
     <Link href={`/products/${product.id}`} className="group">
       <div className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
         <div className="aspect-square bg-gray-200 relative">
-          {/* Placeholder for now - we'll add real images later */}
-          <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-            No Image
-          </div>
+          {hasImage ? (
+            <Image
+              src={product.images[0]}
+              alt={product.name}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+              No Image
+            </div>
+          )}
           {product.stock === 0 && (
             <div 
               className="absolute inset-0 flex items-center justify-center"
