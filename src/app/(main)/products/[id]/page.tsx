@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Product } from '@/lib/types'
+import AddToCartButton from '@/components/AddToCartButton'
 
 async function getProduct(id: string): Promise<Product | null> {
   const res = await fetch(`http://localhost:3000/api/products/${id}`, {
@@ -16,9 +17,10 @@ async function getProduct(id: string): Promise<Product | null> {
   return res.json()
 }
 
-export default async function ProductDetailPage({ params }: { params: {id: string}}) {
+export default async function ProductDetailPage({ params }: { params: Promise<{id: string}> }) {
 
-  const product = await getProduct(params.id)
+  const { id } = await params
+  const product = await getProduct(id)
 
   if(!product) {
     notFound()
@@ -118,16 +120,7 @@ export default async function ProductDetailPage({ params }: { params: {id: strin
             <span className="text-sm text-gray-500">Category: {product.category}</span>
           </div>
 
-          <button 
-            disabled={product.stock === 0}
-            className={`w-full py-3 px-6 rounded-lg font-semibold ${
-              product.stock === 0 
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                : 'bg-black text-white hover:bg-gray-800'
-            }`}
-          >
-            {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
-          </button>
+          <AddToCartButton product={product} />
         </div>
       </div>
     </div>

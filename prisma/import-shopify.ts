@@ -16,6 +16,9 @@ interface ShopifyProduct {
   'Product Category': string
   Status: string
   Vendor: string
+  'Option1 Name': string
+  'Option1 Value': string
+  'Variant SKU': string
 }
 
 async function importShopifyProducts(csvFilePath: string) {
@@ -32,37 +35,98 @@ async function importShopifyProducts(csvFilePath: string) {
   await prisma.product.deleteMany()
   console.log('Cleared existing products')
 
-  // Group products by handle (Shopify exports one row per variant/image)
-  const productMap = new Map<string, ShopifyProduct>()
+  // First pass: Build a map of handles to their base product info
+  const baseProductInfo = new Map<string, ShopifyProduct>()
   
   for (const row of data) {
-    if (row.Handle && !productMap.has(row.Handle)) {
-      productMap.set(row.Handle, row)
+    if (!row.Handle) continue
+    
+    // Store the first complete row for each handle (has title, description, etc.)
+    if (!baseProductInfo.has(row.Handle) && row.Title) {
+      baseProductInfo.set(row.Handle, row)
     }
   }
 
-  console.log(`Found ${productMap.size} unique products to import...`)
+  // Second pass: Group products by Handle + Variant
+  const productMap = new Map<string, ShopifyProduct>()
+  
+  for (const row of data) {
+    if (!row.Handle) continue
+    
+    // Get base product info
+    const baseInfo = baseProductInfo.get(row.Handle)
+    if (!baseInfo) continue
+    
+    // Merge base info with variant-specific info
+    const mergedRow = {
+      ...baseInfo,  // Get title, description from base
+      ...row,       // Override with variant-specific data (price, stock, image)
+      Title: baseInfo.Title,  // Ensure title is from base
+      'Body (HTML)': baseInfo['Body (HTML)'],  // Ensure description is from base
+    }
+    
+    // Create unique key: handle + variant value
+    const variantKey = row['Option1 Value'] 
+      ? `${row.Handle}-${row['Option1 Value']}`
+      : row.Handle
+    
+    if (!productMap.has(variantKey)) {
+      productMap.set(variantKey, mergedRow)
+    }
+  }
+
+  console.log(`Found ${productMap.size} unique products (including variants) to import...`)
 
   // Import unique products
   let imported = 0
-  for (const [handle, product] of productMap) {
+  let skipped = 0
+  
+  for (const [key, product] of productMap) {
     try {
-      // Parse materials from semicolon-separated string
+      // Skip products with missing essential data
+      if (!product.Title || product.Title.trim() === '') {
+        console.log(`⚠️  Skipped: Missing title for ${product.Handle}`)
+        skipped++
+        continue
+      }
+
+      // Parse materials
       const materialsStr = product['Jewelry material (product.metafields.shopify.jewelry-material)'] || ''
       const materials = materialsStr
         .split(';')
         .map(m => m.trim())
         .filter(m => m.length > 0)
 
-      // Collect all image URLs for this product
+      // Collect all images for this specific variant
+      const variantKey = product['Option1 Value']
+        ? `${product.Handle}-${product['Option1 Value']}`
+        : product.Handle
+      
       const images = data
-        .filter(row => row.Handle === handle && row['Image Src'])
+        .filter(row => {
+          const rowKey = row['Option1 Value']
+            ? `${row.Handle}-${row['Option1 Value']}`
+            : row.Handle
+          return rowKey === variantKey && row['Image Src']
+        })
         .map(row => row['Image Src'])
+
+      // Create product name with variant (skip "Default Title")
+      let productName: string
+      let productHandle: string
+
+      if (product['Option1 Value'] && product['Option1 Value'] !== 'Default Title') {
+        productName = `${product.Title} - ${product['Option1 Value']}`
+        productHandle = `${product.Handle}-${product['Option1 Value'].toLowerCase().replace(/\s+/g, '-')}`
+      } else {
+        productName = product.Title
+        productHandle = product.Handle
+      }
 
       await prisma.product.create({
         data: {
-          handle: product.Handle,
-          name: product.Title,
+          handle: productHandle,
+          name: productName,
           description: product['Body (HTML)'] || '',
           price: parseFloat(product['Variant Price']) || 0,
           category: product['Product Category'] || 'Jewelry',
@@ -76,13 +140,17 @@ async function importShopifyProducts(csvFilePath: string) {
       })
 
       imported++
-      console.log(`✅ Imported: ${product.Title}`)
+      console.log(`✅ Imported: ${productName}`)
     } catch (error) {
       console.error(`❌ Error importing ${product.Title}:`, error)
+      skipped++
     }
   }
 
   console.log(`\n🎉 Successfully imported ${imported} products!`)
+  if (skipped > 0) {
+    console.log(`⚠️  Skipped ${skipped} products due to missing data`)
+  }
 }
 
 async function main() {
