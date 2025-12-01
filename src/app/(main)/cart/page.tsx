@@ -4,9 +4,40 @@ import { useCart } from '@/context/CartContext'
 import { formatPrice } from '@/lib/utils'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useState } from 'react'
 
 export default function CartPage() {
     const { items, updateQuantity, removeItem, totalPrice, clearCart } = useCart()
+    const [isLoading, setIsLoading] = useState(false)
+
+    const handleCheckout = async () => {
+      setIsLoading(true)
+
+      try {
+        // Create checkout session
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ items }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Checkout failed')
+      }
+
+      // Redirect to Stripe Checkout using the URL
+      window.location.href = data.url
+      } catch (error) {
+          console.error('Checkout error:', error)
+          alert('Something went wrong. Please try again.')
+      } finally {
+          setIsLoading(false)
+      }
+    }
 
     if (items.length === 0) {
     return (
@@ -157,8 +188,11 @@ export default function CartPage() {
               </div>
             </div>
 
-            <button className="w-full bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-800 mb-4">
-              Proceed to Checkout
+            <button 
+              onClick={handleCheckout}
+              disabled={isLoading}
+              className="w-full bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-800 mb-4">
+                {isLoading ? 'Processing...' : 'Proceed to Checkout'}
             </button>
 
             <Link
