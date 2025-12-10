@@ -48,7 +48,11 @@ export default function ProductCard({ product }: ProductCardProps) {
             {product.name}
           </h3>
           <p className="text-gray-600 text-sm mb-2 line-clamp-2">
-            {product.description}
+            {product.description
+              .replace(/<[^>]+>/g, '')  // Remove all HTML tags
+              .replace(/\s+/g, ' ')      // Replace multiple spaces with single space
+              .trim()
+            }
           </p>
           <div className="flex justify-between items-center">
             <span className="text-lg font-bold">{formatPrice(product.price)}</span>

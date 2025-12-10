@@ -123,11 +123,19 @@ async function importShopifyProducts(csvFilePath: string) {
         productHandle = product.Handle
       }
 
+      const description = product['Body (HTML)'] || ''
+
+      const cleanDescription = description.includes('stylesheet-group') || 
+                               description.includes('body{margin:0}') || 
+                               description.startsWith('[')
+        ? ''  // Replace with empty string if it's stylesheet junk
+        : description
+
       await prisma.product.create({
         data: {
           handle: productHandle,
           name: productName,
-          description: product['Body (HTML)'] || '',
+          description: cleanDescription,
           price: parseFloat(product['Variant Price']) || 0,
           category: product['Product Category'] || 'Jewelry',
           type: product['Jewelry type (product.metafields.shopify.jewelry-type)'] || '',
