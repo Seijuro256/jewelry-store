@@ -2,12 +2,17 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Product } from '@/lib/types'
 import { formatPrice } from '@/lib/utils'
+import { getProductImageUrl } from '@/lib/cloudinary'
 
 interface ProductCardProps {
   product: Product
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
+  const imageUrl = product.images[0] 
+      ? getProductImageUrl(product.images[0], 'card')
+      : '/placeholder.jpg' // fallback image
+
   const getStockStatus = (stock: number) => {
     if (stock === 0) return { text: 'Out of Stock', color: 'text-red-600' }
     if (stock <= 2) return { text: `Only ${stock} left!`, color: 'text-orange-600' }
@@ -23,7 +28,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="aspect-square bg-gray-200 relative">
           {hasImage ? (
             <Image
-              src={product.images[0]}
+              src={imageUrl}
               alt={product.name}
               fill
               className="object-cover"

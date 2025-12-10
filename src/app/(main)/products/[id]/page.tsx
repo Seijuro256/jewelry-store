@@ -1,4 +1,5 @@
 import { formatPrice } from '@/lib/utils'
+import { getProductImageUrl } from '@/lib/cloudinary'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -47,7 +48,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{i
             <>
               <div className="aspect-square bg-gray-200 rounded-lg overflow-hidden relative">
                 <Image
-                  src={product.images[0]}
+                  src={getProductImageUrl(product.images[0], 'detail')}
                   alt={product.name}
                   fill
                   className="object-cover"
@@ -61,7 +62,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{i
                   {product.images.slice(1).map((image, index) => (
                     <div key={index} className="aspect-square bg-gray-200 rounded-lg overflow-hidden relative">
                       <Image
-                        src={image}
+                        src={getProductImageUrl(image, 'thumbnail')}
                         alt={`${product.name} - Image ${index + 2}`} // Naming Alt image to match updated index
                         fill
                         className="object-cover"

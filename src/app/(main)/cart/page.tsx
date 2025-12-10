@@ -2,6 +2,7 @@
 
 import { useCart } from '@/context/CartContext'
 import { formatPrice } from '@/lib/utils'
+import { getProductImageUrl } from '@/lib/cloudinary'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState } from 'react'
@@ -87,7 +88,7 @@ export default function CartPage() {
                   <div className="w-24 h-24 bg-gray-200 rounded relative overflow-hidden">
                     {hasImage ? (
                       <Image
-                        src={item.product.images[0]}
+                        src={getProductImageUrl(item.product.images[0], 'thumbnail')}
                         alt={item.product.name}
                         fill
                         className="object-cover"
